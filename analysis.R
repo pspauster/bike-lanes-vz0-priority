@@ -22,14 +22,27 @@ community_boards <- read_sf("https://data.cityofnewyork.us/resource/jp9i-3b7y.ge
 
 cbs_nolanes <- c("303", "314", "317", "312")
 
-priority_cbs <- c("303", "314", "317", "312", "315", "305", "304", "404", "403")
+priority_cbs <- c("303", "314", "317", "312", "315", "305", "304", "404", "403", "405")
 
 crashes_cyclists_sf <- crashes_cyclists %>% 
   filter(!is.na(longitude)) %>% 
   st_as_sf(coords = c("longitude", "latitude")) %>% 
   st_set_crs(st_crs(community_boards)) %>% 
   mutate(in_cb = lengths(st_intersects(.,community_boards %>% filter(boro_cd %in% cbs_nolanes))),
-         in_priority = lengths(st_intersects(.,community_boards %>% filter(boro_cd %in% priority_cbs))))
+         in_priority = lengths(st_intersects(.,community_boards %>% filter(boro_cd %in% priority_cbs)))) %>% 
+  st_intersection(community_boards) %>% 
+  mutate(boro_cd_cod = case_when(
+    boro_cd == "303" ~ "BK 3",
+    boro_cd == "314" ~ "BK 14",
+    boro_cd == "312" ~ "BK 12",
+    boro_cd == "317" ~ "BK 17",
+    boro_cd == "315" ~ "BK 15",
+    boro_cd == "305" ~ "BK 5",
+    boro_cd == "304" ~ "BK 4",
+    boro_cd == "403" ~ "QN 3",
+    boro_cd == "404" ~ "QN 4",
+    boro_cd == "405" ~ "QN 5"
+  ))
 
 summary <- crashes_cyclists_sf %>% 
   group_by(in_cb) %>% 
@@ -41,10 +54,48 @@ summary_priority <- crashes_cyclists_sf %>%
   summarize(total_injuries = sum(number_of_persons_injured, na.rm = T),
             total_killed = sum(number_of_persons_killed, na.rm = T))
 
+cb_stats <- st_intersection(bike_lanes_17, priority_districts) %>% 
+  group_by(boro_cd_cod) %>% 
+  summarize(route_length_17 = sum(length, na.rm = T)/5280) %>% 
+  as.data.frame() %>% 
+  select(-geometry) %>% 
+  left_join(
+    st_intersection(bike_lanes_23, priority_districts) %>% 
+      group_by(boro_cd_cod) %>% 
+      summarize(route_length_23 = sum(length, na.rm = T)/5280) %>% 
+      as.data.frame() %>% 
+      select(-geometry),
+    by = "boro_cd_cod"
+  ) %>% 
+  left_join(
+      crashes_cyclists_sf %>% 
+      group_by(boro_cd_cod) %>% 
+      summarize(total_injuries = sum(number_of_cyclist_injured, na.rm= T),
+                total_deaths = sum(number_of_cyclist_killed, na.rm = T)) %>% 
+      as.data.frame()%>% 
+      select(-geometry),
+    by = "boro_cd_cod"
+  ) %>% 
+  mutate(miles_new = route_length_23 - route_length_17) %>% 
+  left_join(community_boards %>% 
+              mutate(boro_cd_cod = case_when(
+                boro_cd == "303" ~ "BK 3",
+                boro_cd == "314" ~ "BK 14",
+                boro_cd == "312" ~ "BK 12",
+                boro_cd == "317" ~ "BK 17",
+                boro_cd == "315" ~ "BK 15",
+                boro_cd == "305" ~ "BK 5",
+                boro_cd == "304" ~ "BK 4",
+                boro_cd == "403" ~ "QN 3",
+                boro_cd == "404" ~ "QN 4",
+                boro_cd == "405" ~ "QN 5"
+              ))
+              , by = "boro_cd_cod") %>% 
+  st_as_sf()
 
 bike_lanes_23_clean <- bike_lanes_23 %>%
   st_transform(st_crs(community_boards)) %>% 
-  st_intersection(community_boards%>% filter(boro_cd %in% priority_cbs))
+  st_intersection(community_boards %>% filter(boro_cd %in% priority_cbs))
 
 bike_lanes_17_clean <- bike_lanes_17%>%
   st_transform(st_crs(community_boards)) %>% 
@@ -72,7 +123,7 @@ tag.map.title <- tags$style(HTML("
   }
   span {
     font-weight: 800;
-    color: red;
+    color: black;
   }
   p {
     font-size: 15px;
@@ -98,14 +149,19 @@ title <- tags$div(
 routes_map <- leaflet(options = leafletOptions(zoomControl = FALSE)) %>% 
   setView(lat = 40.6686969078186, lng = -73.93827935702873, zoom = 12) %>% 
   addProviderTiles(provider = "CartoDB.Positron") %>% 
-  addPolygons(data = community_boards %>% filter(boro_cd %in% priority_cbs),
-              color = "red",
-              fill = FALSE,
+  addPolygons(data = cb_stats,
+              color = "black",
+              fill = "white",
+              fillOpacity = 0,
               stroke = TRUE,
               weight = 1,
-              popup = ~paste0(boro_cd)) %>% 
+              popup = ~paste0(boro_cd_cod,
+                              "<br><b>Since 2017</b><br>",
+                              total_injuries, " people injured <br>",
+                              total_deaths, " people killed"
+                              )) %>% 
   addPolylines(data = bike_lanes_23_clean,
-               color = "gold",
+               color = "#ffb600",
                opacity = 1,
                weight = 0.75
                ) %>%
@@ -117,7 +173,7 @@ routes_map <- leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
              className = "map-title",
              position = "topleft") %>% 
   addLegend("bottomleft",
-            colors = c("gold", "green"),
+            colors = c("#ffb600", "green"),
             labels = c("New bike routes", "Existing bike routes")) %>% 
   htmlwidgets::onRender("function(el, x) {
         L.control.zoom({ position: 'bottomright' }).addTo(this)
