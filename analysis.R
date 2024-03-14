@@ -166,14 +166,14 @@ routes_map <- leaflet(options = leafletOptions(zoomControl = FALSE)) %>%
                weight = 0.75
                ) %>%
   addPolylines(data = bike_lanes_17_clean,
-               color = "green",
+               color = "#55b359",
                opacity = 1,
                weight = 0.75) %>%
   addControl(title,
              className = "map-title",
              position = "topleft") %>% 
   addLegend("bottomleft",
-            colors = c("#ffb600", "green"),
+            colors = c("#ffb600", "#55b359"),
             labels = c("New bike routes", "Existing bike routes")) %>% 
   htmlwidgets::onRender("function(el, x) {
         L.control.zoom({ position: 'bottomright' }).addTo(this)
@@ -184,4 +184,38 @@ routes_map
 mapview::mapshot(routes_map, url = "map.html", file = "map.png")
 
 
+####protected
+
+protected_city <- bike_lanes_23 %>% 
+  as.data.frame() %>% 
+  group_by(facilitycl) %>% 
+  summarize(total_length = sum(length, na.rm = T)/5280) %>% 
+  mutate(total = sum(total_length),
+         per_protected = total_length/total*100,
+         unit = "Citywide") %>% 
+  filter(facilitycl == "I")
+
+protected_priority <- bike_lanes_23 %>% 
+  st_intersection(priority_districts) %>% 
+  as.data.frame() %>% 
+  group_by(facilitycl) %>% 
+  summarize(total_length = sum(length, na.rm = T)/5280)%>% 
+  mutate(total = sum(total_length),
+         per_protected = total_length/total*100,
+         unit = "Priority Districts") %>% 
+  filter(facilitycl == "I")
+
+protected4 <- bike_lanes_23 %>% 
+  st_intersection(priority_districts %>%  filter(boro_cd_cod %in% c("BK 3", "BK 17", "BK 14", "BK 12"))) %>% 
+  as.data.frame() %>% 
+  group_by(facilitycl) %>% 
+  summarize(total_length = sum(length, na.rm = T)/5280)%>% 
+  mutate(total = sum(total_length),
+         per_protected = total_length/total*100,
+         unit = "Brooklyn Community Boards 3, 12, 14, 17") %>% 
+  filter(facilitycl == "I")
+
+
+
+write.csv(bind_rows(protected_city, bind_rows(protected_priority, protected4)), "protected_sum.csv")
 
