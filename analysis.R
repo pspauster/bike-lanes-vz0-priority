@@ -143,7 +143,7 @@ tag.map.title <- tags$style(HTML("
 "))
 
 title <- tags$div(
-  tag.map.title, HTML("<img src = https://patrickspauster.com/images/streetsblog-logo.png><p class = 'title'>No New Bike Routes In South Brooklyn</p><p>New Bicycle routes in Priority Community Boards since 2017<br><span>Select a CB</span> to view the number of injuries and deaths</p>")
+  tag.map.title, HTML("<img src = https://patrickspauster.com/images/streetsblog-logo.png><p class = 'title'>Few New Bike Routes In South Brooklyn</p><p>New Bicycle routes in priority community boards since 2017<br><span>Select a CB</span> to view the number of injuries and deaths</p>")
 )  
 
 routes_map <- leaflet(options = leafletOptions(zoomControl = FALSE)) %>% 
@@ -214,7 +214,6 @@ protected4 <- bike_lanes_23 %>%
          per_protected = total_length/total*100,
          unit = "Brooklyn Community Boards 3, 12, 14, 17") %>% 
   filter(facilitycl == "I")
-
 
 
 write.csv(bind_rows(protected_city, bind_rows(protected_priority, protected4)), "protected_sum.csv")
