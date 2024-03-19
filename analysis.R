@@ -121,9 +121,13 @@ tag.map.title <- tags$style(HTML("
     margin-block: 0px;
     font-weight: 800;
   }
-  span {
+  .yellow {
     font-weight: 800;
-    color: black;
+    color: #ffb600;
+  }
+  .green {
+    font-weight: 800;
+    color: #55b359;
   }
   p {
     font-size: 15px;
@@ -132,7 +136,7 @@ tag.map.title <- tags$style(HTML("
     margin-block: 0px;
   }
   img {
-  max-width: 428px
+  max-width: 500px
   }
   @media (max-width:475px) {
   img {max-width:280px}
@@ -143,7 +147,7 @@ tag.map.title <- tags$style(HTML("
 "))
 
 title <- tags$div(
-  tag.map.title, HTML("<img src = https://patrickspauster.com/images/streetsblog-logo.png><p class = 'title'>Few New Bike Routes In South Brooklyn</p><p>New Bicycle routes in priority community boards since 2017<br><span>Select a CB</span> to view the number of injuries and deaths</p>")
+  tag.map.title, HTML("<img src = https://patrickspauster.com/images/streetsblog-logo.png><p class = 'title'>Four Community Boards Got No New Bike Routes</p><p><span class = 'green'>Existing</span> and <span class = 'yellow'>new</span> bicycle routes in priority community boards since 2017<br>Select a CB to view the number of injuries and deaths</p>")
 )  
 
 routes_map <- leaflet(options = leafletOptions(zoomControl = FALSE)) %>% 
