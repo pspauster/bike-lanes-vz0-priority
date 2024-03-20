@@ -20,6 +20,16 @@ crashes_cyclists <- read_csv(URLencode("https://data.cityofnewyork.us/resource/h
 
 community_boards <- read_sf("https://data.cityofnewyork.us/resource/jp9i-3b7y.geojson")
 
+intersection <- st_intersection(community_boards %>% st_transform(st_crs(bike_lanes_23)), bike_lanes_23)
+
+intersection %>% 
+  as.data.frame() %>% 
+  group_by(boro_cd %in% cbs_nolanes) %>% 
+  summarize(length = sum(length, na.rm = T)/5280) %>% 
+  janitor::adorn_totals()
+
+# Just 3% of lanes
+
 cbs_nolanes <- c("303", "314", "317", "312")
 
 priority_cbs <- c("303", "314", "317", "312", "315", "305", "304", "404", "403", "405")
@@ -44,10 +54,19 @@ crashes_cyclists_sf <- crashes_cyclists %>%
     boro_cd == "405" ~ "QN 5"
   ))
 
+crashes_cyclists_sf %>% as.data.frame() %>% 
+  group_by(boro_cd) %>% 
+  summarize(total_injuries = sum(number_of_persons_injured, na.rm = T),
+            total_killed = sum(number_of_persons_killed, na.rm = T))
+
 summary <- crashes_cyclists_sf %>% 
   group_by(in_cb) %>% 
   summarize(total_injuries = sum(number_of_persons_injured, na.rm = T),
             total_killed = sum(number_of_persons_killed, na.rm = T))
+
+summary %>% as.data.frame() %>% select(-geometry) %>%  janitor::adorn_totals()
+
+#but 10 percent of bike injuries and 12 percent of bike fatalities
 
 summary_priority <- crashes_cyclists_sf %>% 
   group_by(in_cb, in_priority) %>% 
